@@ -30,6 +30,7 @@ let frame = 0;
 let paused = false;
 let timeLeft = 90;
 let gameOver = false;
+let finalNoticeShown = false;
 const START_FOOD_COUNT = 62;
 const FOOD_YARN_VALUE = 3;
 const MAX_CARRIED_YARN = 96;
@@ -179,6 +180,7 @@ function reset() {
   frame = 0;
   timeLeft = GAME_SECONDS;
   gameOver = false;
+  finalNoticeShown = false;
   paused = false;
   cats = [
     makeCat("나비", W / 2, H / 2, "#ff748c", "#fff0e4", true, 0),
@@ -188,7 +190,7 @@ function reset() {
     makeCat("루루", W * 0.16, H * 0.4, "#b78bea", "#fff0fb", false, 5),
   ];
   nestYarn = 0;
-  setNotice("실 조각을 물고 캣타워 둥지에 놓아봐!", 150);
+  setNotice("90초 안에 실을 모아 둥지에 가장 많이 놓아봐!", 150);
   for (let i = 0; i < START_FOOD_COUNT; i++) spawnFood();
 }
 
@@ -322,6 +324,9 @@ function updateCat(cat) {
   let angle = Math.atan2(ty - cat.y, tx - cat.x);
   let speed = cat.player ? 4.25 : 3.55;
   let steer = cat.player ? 0.29 : 0.24;
+  const burden = clamp(carriedYarn(cat) / MAX_CARRIED_YARN, 0, 1);
+  speed *= 1 - burden * 0.22;
+  steer *= 1 - burden * 0.12;
 
   if (!cat.player && distance(cat, nest) < nest.r + 96) {
     if (carriedYarn(cat) < 10) {
@@ -437,6 +442,9 @@ function depositYarn(cat) {
   }
   if (cat.player) {
     setNotice(`둥지에 실 ${scoreGain}cm 놓고 왔어!`, 64);
+  }
+  if (cat.player) {
+    setNotice(combo > 1 ? `콤보 x${combo}! ${scoreGain}cm 놓고 왔어!` : `둥지에 ${scoreGain}cm 놓고 왔어!`, 74);
   }
   if (cat.player) {
     setNotice(combo > 1 ? `콤보 x${combo}! ${scoreGain}cm 놓고 왔어!` : `둥지에 ${scoreGain}cm 놓고 왔어!`, 74);
@@ -585,8 +593,12 @@ function checkCollisions() {
     }
   }
 
-  robot.x = W / 2 + Math.cos(robot.a) * Math.min(320, W * 0.29);
-  robot.y = H / 2 + Math.sin(robot.a * 1.32) * Math.min(250, H * 0.32);
+  const loadedCats = cats.filter((cat) => cat.alive && carriedYarn(cat) > 32);
+  const leader = loadedCats.sort((a, b) => carriedYarn(b) - carriedYarn(a))[0];
+  const patrolX = W / 2 + Math.cos(robot.a) * Math.min(320, W * 0.29);
+  const patrolY = H / 2 + Math.sin(robot.a * 1.32) * Math.min(250, H * 0.32);
+  robot.x = leader ? patrolX * 0.7 + leader.x * 0.3 : patrolX;
+  robot.y = leader ? patrolY * 0.7 + leader.y * 0.3 : patrolY;
   robot.a += robot.speed;
   robot.warning = Math.max(0, robot.warning - 1);
 
@@ -768,8 +780,8 @@ function drawTower() {
   ctx.arc(nest.x, nest.y, nest.r - 6, 0, Math.PI * 2);
   ctx.stroke();
 
-  ctx.strokeStyle = "rgba(240, 111, 134, .36)";
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = timeLeft <= 20 && !gameOver ? "rgba(240, 93, 117, .68)" : "rgba(240, 111, 134, .36)";
+  ctx.lineWidth = timeLeft <= 20 && !gameOver ? 5 : 3;
   ctx.setLineDash([7, 8]);
   ctx.beginPath();
   ctx.arc(nest.x, nest.y, nest.r + 8 + Math.sin(frame * 0.08) * 2, 0, Math.PI * 2);
@@ -1175,8 +1187,18 @@ function drawPauseOverlay() {
 function loop() {
   if (!paused) {
     frame += 1;
-    for (const cat of cats) updateCat(cat);
-    checkCollisions();
+    if (!gameOver) {
+      timeLeft = Math.max(0, GAME_SECONDS - Math.floor(frame / 60));
+      if (timeLeft <= 0) {
+        gameOver = true;
+      }
+      for (const cat of cats) updateCat(cat);
+      checkCollisions();
+    } else if (!finalNoticeShown) {
+      const rivalBest = Math.max(...cats.slice(1).map((cat) => cat.nestScore));
+      setNotice(nestYarn >= rivalBest ? `승리! ${nestYarn}cm를 모았어!` : `아쉬워! 라이벌 ${rivalBest}cm, 나는 ${nestYarn}cm`, 240);
+      finalNoticeShown = true;
+    }
   }
 
   drawRoom();
@@ -1190,7 +1212,7 @@ function loop() {
 
   const player = cats[0];
   const rivalBest = Math.max(...cats.slice(1).map((cat) => cat.nestScore));
-  lengthStat.textContent = `${nestYarn}cm / 라이벌 ${rivalBest}cm`;
+  lengthStat.textContent = `${nestYarn}cm / 라이벌 ${rivalBest}cm / ${timeLeft}s`;
   popStat.textContent = `${carriedYarn(player) * CM_PER_YARN}cm`;
   requestAnimationFrame(loop);
 }
