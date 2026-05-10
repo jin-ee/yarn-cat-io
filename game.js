@@ -565,6 +565,26 @@ function checkCollisions() {
   if (sparkles.length > 80) sparkles.splice(0, sparkles.length - 80);
   if (puffs.length > 30) puffs.splice(0, puffs.length - 30);
 
+  for (const cat of cats) {
+    if (!cat.alive) continue;
+    eatFood(cat);
+    depositYarn(cat);
+  }
+
+  for (const cat of cats) {
+    if (!cat.alive) continue;
+    for (const owner of cats) {
+      if (!owner.alive || owner === cat) continue;
+      for (let i = 16; i < owner.yarn.length; i += 4) {
+        if (owner.yarn[i].wet > 0) continue;
+        if (Math.hypot(cat.x - owner.yarn[i].x, cat.y - owner.yarn[i].y) < 30) {
+          biteYarn(cat, owner, i);
+          break;
+        }
+      }
+    }
+  }
+
   robot.x = W / 2 + Math.cos(robot.a) * Math.min(320, W * 0.29);
   robot.y = H / 2 + Math.sin(robot.a * 1.32) * Math.min(250, H * 0.32);
   robot.a += robot.speed;
@@ -1155,14 +1175,7 @@ function drawPauseOverlay() {
 function loop() {
   if (!paused) {
     frame += 1;
-    if (!gameOver) {
-      timeLeft = Math.max(0, GAME_SECONDS - Math.floor(frame / 60));
-      if (timeLeft <= 0) {
-        gameOver = true;
-        setNotice("시간 종료! 둥지 실을 확인해봐.", 180);
-      }
-    }
-    for (const cat of cats) updateCatV2(cat);
+    for (const cat of cats) updateCat(cat);
     checkCollisions();
   }
 
@@ -1177,7 +1190,7 @@ function loop() {
 
   const player = cats[0];
   const rivalBest = Math.max(...cats.slice(1).map((cat) => cat.nestScore));
-  lengthStat.textContent = `${nestYarn}cm / 라이벌 ${rivalBest}cm / ${timeLeft}s`;
+  lengthStat.textContent = `${nestYarn}cm / 라이벌 ${rivalBest}cm`;
   popStat.textContent = `${carriedYarn(player) * CM_PER_YARN}cm`;
   requestAnimationFrame(loop);
 }
@@ -1204,25 +1217,6 @@ window.addEventListener("keydown", (event) => {
     return;
   }
   keys[event.key] = true;
-  const player = cats[0];
-  const dirs = {
-    ArrowLeft: [-1, 0],
-    a: [-1, 0],
-    A: [-1, 0],
-    ArrowRight: [1, 0],
-    d: [1, 0],
-    D: [1, 0],
-    ArrowUp: [0, -1],
-    w: [0, -1],
-    W: [0, -1],
-    ArrowDown: [0, 1],
-    s: [0, 1],
-    S: [0, 1],
-  };
-  if (dirs[event.key] && !paused && !gameOver) {
-    event.preventDefault();
-    startJump(player, dirs[event.key][0], dirs[event.key][1]);
-  }
 });
 
 window.addEventListener("keyup", (event) => {
