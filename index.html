@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>실타래 고양이.io</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game-shell">
+    <canvas id="game" aria-label="실타래 고양이.io 게임 화면"></canvas>
+
+    <section class="topbar hud">
+      <div>
+        <h1>실타래 고양이.io</h1>
+        <p>실을 물고 캣타워 둥지에 많이많이 모아봐!</p>
+      </div>
+      <div class="stats">
+        <span>내 둥지 <strong id="lengthStat">0cm</strong></span>
+        <span>들고 가는 실 <strong id="popStat">0cm</strong></span>
+      </div>
+    </section>
+
+    <section class="controls hud">
+      <span>이동: WASD/방향키 톡톡 점프</span>
+      <span>목표: 실을 물고 캣타워 둥지에 놓기</span>
+      <span>긴 실일수록 점프가 짧아져요</span>
+      <span>흘린 물: 미끄덩 + 실 젖음</span>
+      <span>소파: 지름길</span>
+      <span>로봇청소기: 실 자르기</span>
+      <button id="restartBtn" type="button">다시 시작</button>
+    </section>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>

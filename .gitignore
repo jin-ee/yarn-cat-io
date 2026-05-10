@@ -1,0 +1,4 @@
+server.*.log
+assets/*source*.png
+assets/cat-sheet.png
+assets/cat-sheet-cutout.png
